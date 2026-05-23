@@ -6,6 +6,19 @@ A production-ready full-stack checkout inventory reservation system built with N
 
 ---
 
+# Live Links
+
+## GitHub Repository
+
+https://github.com/Abuthwahir/stackreserve
+
+## Live Deployment
+
+https://stackreserve.vercel.app
+
+
+---
+
 ## 1. Project Overview & Features
 
 When a customer initiates a checkout session, stock is temporarily held for a limited window (e.g., 10 minutes) before payment is finalized. This system manages these holds dynamically and safely.
@@ -55,6 +68,7 @@ When a customer initiates a checkout session, stock is temporarily held for a li
 ## 5. Concurrency Safety (SELECT ... FOR UPDATE)
 
 ### How It Works:
+
 1. **Interactive Transaction Begins**: An isolated query session is opened.
 2. **Obtain Row Lock**: The database locks the matching `Inventory` row:
    ```sql
@@ -64,7 +78,7 @@ When a customer initiates a checkout session, stock is temporarily held for a li
    LIMIT 1
    FOR UPDATE
    ```
-   *Any concurrent transaction attempting to read/write this row for update blocks here until our transaction commits or aborts.*
+   _Any concurrent transaction attempting to read/write this row for update blocks here until our transaction commits or aborts._
 3. **Verify Stock**: Calculate `availableStock = totalStock - reservedStock`. If insufficient, return `409 Conflict`.
 4. **Update Stock**: Increment/decrement `reservedStock` atomically, asserting that inventory totals never go below 0.
 5. **Create/Update Reservation**: Insert the `Reservation` record with the expiration timestamp.
@@ -87,25 +101,27 @@ When a customer initiates a checkout session, stock is temporarily held for a li
 
 ## 7. API Endpoints Summary
 
-| Method | Route | Purpose |
-| :--- | :--- | :--- |
-| **GET** | `/api/products` | Retrieve products, warehouse stock levels, and available stock. |
-| **GET** | `/api/warehouses` | Retrieve all warehouses. |
-| **POST** | `/api/reservations` | Create a pending reservation using row-level locking. |
-| **GET** | `/api/reservations/[id]` | Fetch reservation details; auto-releases reservation if expired. |
+| Method   | Route                            | Purpose                                                          |
+| :------- | :------------------------------- | :--------------------------------------------------------------- |
+| **GET**  | `/api/products`                  | Retrieve products, warehouse stock levels, and available stock.  |
+| **GET**  | `/api/warehouses`                | Retrieve all warehouses.                                         |
+| **POST** | `/api/reservations`              | Create a pending reservation using row-level locking.            |
+| **GET**  | `/api/reservations/[id]`         | Fetch reservation details; auto-releases reservation if expired. |
 | **POST** | `/api/reservations/[id]/confirm` | Confirm purchase; deducts both `totalStock` and `reservedStock`. |
-| **POST** | `/api/reservations/[id]/release` | Cancel reservation; releases reserved stock back to available. |
+| **POST** | `/api/reservations/[id]/release` | Cancel reservation; releases reserved stock back to available.   |
 
 ---
 
 ## 8. UI Screenshots
 
 ### Home Page
-*(Lists products, warehouse details, stock totals, and reservation triggers).*
+
+_(Lists products, warehouse details, stock totals, and reservation triggers)._
 `[ Placeholder: Insert Home Page inventory card view screenshot here ]`
 
 ### Reservation Details Page
-*(Displays active countdown timer, cancel controls, and purchase confirmation).*
+
+_(Displays active countdown timer, cancel controls, and purchase confirmation)._
 `[ Placeholder: Insert Reservation Checkout Details view screenshot here ]`
 
 ---
@@ -113,6 +129,7 @@ When a customer initiates a checkout session, stock is temporarily held for a li
 ## 9. Environment Variables
 
 Create a `.env` file in the root directory:
+
 ```env
 # Neon PostgreSQL Connection URL
 DATABASE_URL="postgresql://username:password@localhost:5432/inventory_db?schema=public"
@@ -123,6 +140,7 @@ DATABASE_URL="postgresql://username:password@localhost:5432/inventory_db?schema=
 ## 10. Setup Instructions
 
 ### Local Development Setup:
+
 1. **Install Dependencies**:
    ```bash
    npm install
@@ -149,11 +167,13 @@ DATABASE_URL="postgresql://username:password@localhost:5432/inventory_db?schema=
 ## 11. Deployment Setup (Vercel + Neon)
 
 ### Neon PostgreSQL Setup:
+
 1. Create a project on [Neon](https://neon.tech/).
 2. Copy the Connection String from your dashboard.
 3. Replace the `DATABASE_URL` in your `.env` file.
 
 ### Vercel Deployment:
+
 1. Import your repository into **Vercel**.
 2. Add the `DATABASE_URL` environment variable under Project Settings.
 3. Configure the build command or run migrations against your production database using `npx prisma db push`.
@@ -164,10 +184,12 @@ DATABASE_URL="postgresql://username:password@localhost:5432/inventory_db?schema=
 ## 12. Tradeoffs & Future Scope
 
 ### Tradeoffs:
+
 - **Simplicity over Distributed Queues**: Interactive transactions on a single PostgreSQL instance were chosen for transactional safety without introducing infrastructure overhead (like Redis/Kafka).
 - **Lazy Cleanup**: Auto-releasing on fetch reduces background worker costs but depends on users or API requests hitting the endpoint to clean up database stock.
 
 ### Future Improvements:
+
 - **Distributed Locks**: Use Redis-based locks (Redlock) for faster caching and session limits.
 - **Idempotency Keys**: Block double-submissions at the API gateway layer using UUID headers.
 - **Background Cleanup Workers**: Integrate background task processors for deterministic cleanup.
