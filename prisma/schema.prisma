@@ -1,0 +1,74 @@
+// Prisma schema file for the Inventory Reservation System
+// Configured for PostgreSQL (fully compatible with Neon connection string/pooling)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  released
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  inventories  Inventory[]
+  reservations Reservation[]
+}
+
+model Warehouse {
+  id           String        @id @default(cuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  inventories  Inventory[]
+  reservations Reservation[]
+}
+
+model Inventory {
+  id            String    @id @default(cuid())
+  productId     String
+  warehouseId   String
+  totalStock    Int
+  reservedStock Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Unique constraint ensuring stock is tracked per product per warehouse
+  @@unique([productId, warehouseId])
+  // Indexes for searching by product and warehouse
+  @@index([productId])
+  @@index([warehouseId])
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  productId   String
+  warehouseId String
+  quantity    Int
+  status      ReservationStatus
+  expiresAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Indexes to optimize reservation checks, expiration cleanups, and warehouse queries
+  @@index([status])
+  @@index([expiresAt])
+  @@index([productId])
+  @@index([warehouseId])
+}
